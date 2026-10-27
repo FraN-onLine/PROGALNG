@@ -1,0 +1,14 @@
+variable x is 6
+variable y is x plus 7
+
+display x
+display y
+display "Arom ALcausin"
+
+variable z is (6 plus y)
+
+display z
+
+variable arom is ask "give me a number: "
+
+display arom 

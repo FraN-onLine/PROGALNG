@@ -1,0 +1,50 @@
+# Example PLFP program
+# Demonstrates variable declaration, arithmetic with precedence, input, and printing.
+
+# Simple assignments
+variable age is 25
+variable pi is 3.14159
+variable name is "PLFP"
+
+# Arithmetic with operator precedence (times/over before plus/minus)
+variable score is 10 plus 5 times 2        # 10 + (5 * 2) = 20
+variable half is (10 plus 5) over 3        # (10 + 5) / 3  = 5
+variable diff is 100 minus 30 minus 10     # (100 - 30) - 10 = 60
+
+# Using previously declared variables in expressions
+variable double_age is age times 2         # 25 * 2 = 50
+variable age_plus_half is age plus half    # 25 + 5 = 30
+
+# Parenthesized expressions
+variable y is (6 plus 7) over 8            # (6 + 7) / 8 = 1.625
+
+# String concatenation
+variable greeting is "Hello" plus " " plus name
+
+# User input (the interpreter will pause and wait for your typing)
+variable user_age is ask "Enter your age: "
+
+# Printing variables and strings
+display age,
+display pi,
+display name,
+display score,
+display half,
+display diff,
+display double_age,
+display age_plus_half,
+display y,
+display greeting,
+display user_age,
+
+# Displaying expressions (arithmetic on the fly)
+display age plus 7 over 3,
+display (age plus 7) over 3,
+display "Hello" plus " " plus name,
+
+display "Hello from PLFP!"
+
+# Input
+variable input is ask "enter number 1: "
+variable input2 is ask "enter number 2: "
+display input plus input2
