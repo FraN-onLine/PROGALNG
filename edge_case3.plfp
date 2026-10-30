@@ -1,0 +1,11 @@
+#edge case 3: precedence, parentheses and mod
+
+variable total is 2 plus 3 times 4 #times goes first, 14
+variable paren is (2 plus 3) times 4 #parens win, 20
+variable leftover is 17 mod 5 #remainder, 2
+variable frac is 5.5 mod 2 #works on decimals too, 1.5
+
+display total,
+display paren,
+display leftover,
+display frac,

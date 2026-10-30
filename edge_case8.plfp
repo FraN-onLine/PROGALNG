@@ -1,0 +1,7 @@
+#edge case 8: missing expression and bad statements
+
+variable broken is #is with nothing after it
+what even is this #not a PLFP statement
+
+variable fine is 1
+display fine

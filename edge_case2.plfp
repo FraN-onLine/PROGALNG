@@ -1,0 +1,10 @@
+#edge case 2: negative numbers
+#minus can be the keyword or the unary sign, depends where it sits
+
+variable debt is -250
+variable refund is -debt #two negatives make it positive
+display debt, #-250
+display refund, #250
+
+variable diff is 100 minus -30 #same as 100 plus 30
+display diff, #130

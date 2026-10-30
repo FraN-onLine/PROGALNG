@@ -1,0 +1,10 @@
+#edge case 5: keywords cant be used as variable names
+
+variable plus is 3 #some reserved keyworsds
+variable display is 9 
+variable is is 3 
+variable mod is 2 
+variable ask is 7
+variable variable is "variable"
+
+display "we still get here"

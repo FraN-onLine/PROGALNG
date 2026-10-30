@@ -1,0 +1,8 @@
+#edge case 6: comments and strings
+#the # inside the string below is part of the string, not a comment
+
+variable label is "budget #1"
+display label, #this # starts a comment and gets removed
+display    "extra    spaces"   , #spacing around the keyword doesnt matter
+variable x is 4
+display x #comma at the end is optional

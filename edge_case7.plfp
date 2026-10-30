@@ -1,0 +1,9 @@
+#edge case 7: ask gives back a number if you type a number
+#if you type words it gives back the words instead
+
+variable age is ask "how old are you? "
+variable next is age plus 1
+display next, #example type 20 to get 21 or a string to get prompted an err msg
+
+variable pet is ask "whats your pet? "
+display "your pet is" plus " " plus pet,

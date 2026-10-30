@@ -3,42 +3,29 @@ PLFP - Programming Language Final Project (very good name)
 
 PLFP is a minimal programming language that supports:
     * Variable declaration: variable [name] is [expression]
+    * Variable with no value: variable [name]  (starts at 0)
     * Printing: display [name]   OR   display "string"
 
 An [expression] can be an integer or float value, a string, a variable name, or a combination
-using the arithmetic operators plus, minus, times, over with parentheses and
-standard operator precedence (times/over before plus/minus).
+using the arithmetic operators plus, minus, times, over, mod with parentheses and
+standard operator precedence (times/over/mod before plus/minus).
 
-This file is the interpreter. It currently can read any .plfp source file, uses regular expressions and a small recursive-descent
+This file is the interpreter. It can read any .plfp source file, uses regular expressions and a small recursive-descent
 parser to evaluate expressions, executes the statements, and prints the output.
 
 How to run:
     python interpreter.py [source_file.plfp]
 """
 
-# regex is used for the PLFP syntax recognition, and sys is used for command-line argument handling
+#regex is used for the PLFP syntax recognition, and sys is used for command-line argument handling
 import re
 import sys
 
 
-# Tokenizer
+#Tokenizer
 def tokenize_expression(text):
-    """
-    Convert an expression string into a list of (type, value) tokens.
-
-    Recognised token types:
-        NUMBER   - integer or float literal 
-        STRING   - double-quoted string literal (quotes stripped)
-        IDENT    - variable name (or keyword written as identifier)
-        PLUS     - keyword "plus"
-        MINUS    - keyword "minus"
-        TIMES    - keyword "times"
-        OVER     - keyword "over"
-        ASK      - keyword "ask", which is the input function 
-        SUB      - "-" (unary negation)
-        LPAREN   - "("
-        RPAREN   - ")"
-    """
+    """turns an expression string into a list of (type, value) tokens,
+    strings lose their quotes and numbers become int or float"""
     token_specification = [
         ('LPAREN',   r'\('),
         ('RPAREN',   r'\)'),
@@ -64,21 +51,22 @@ def tokenize_expression(text):
         if kind == 'MISMATCH':
             raise SyntaxError(f"Unexpected character {value!r} in expression")
 
-        # for strings, we strip the quotes then append the token with type STRING and the stripped value
+        #for strings, we strip the quotes then append the token with type STRING and the stripped value
         if kind == 'STRING':
             value = value[1:-1]
             tokens.append(('STRING', value))
-        # for numbers, we convert to int or float based on the decimal point, then append the token with type NUMBER and the numeric value
+        #for numbers, we convert to int or float based on the decimal point, then append the token with type NUMBER and the numeric value
         elif kind == 'NUMBER':
             value = float(value) if '.' in value else int(value)
             tokens.append(('NUMBER', value))
-        # for identifiers, we check if they match any of the keywords and map them to their corresponding token type; otherwise, we keep them as IDENT
+        #for identifiers, we check if they match any of the keywords and map them to their corresponding token type; otherwise, we keep them as IDENT
         elif kind == 'IDENT':
             keyword_map = {
                 'plus':   'PLUS',
                 'minus':  'MINUS',
                 'times':  'TIMES',
                 'over':   'OVER',
+                'mod':    'MOD',
                 'ask':    'ASK',
             }
             kind = keyword_map.get(value.lower(), 'IDENT')
@@ -90,31 +78,32 @@ def tokenize_expression(text):
     return tokens
 
 
-# our class parser is used to parse the tokenized expression into an AST (syntax tree) that can be evaluated later. It implements a recursive descent parser for the expression grammar defined in the docstring.
+#our class parser is used to parse the tokenized expression into an AST (syntax tree) that can be evaluated later. It implements a recursive descent parser for the expression grammar defined in the docstring.
 class Parser:
-    # note, in EBNF {} means zero or more repetitions, and () means grouping. The grammar is defined using EBNF notation, and the parser implements this grammar using recursive methods for each non-terminal in the grammar. The precedence is handled by the order of method calls, with parse_expression calling parse_term, which calls parse_factor, ensuring that multiplication/division is evaluated before addition/subtraction.
+    #note, in EBNF {} means zero or more repetitions, and () means grouping. The grammar is defined using EBNF notation, and the parser implements this grammar using recursive methods for each non-terminal in the grammar. The precedence is handled by the order of method calls, with parse_expression calling parse_term, which calls parse_factor, ensuring that multiplication/division is evaluated before addition/subtraction.
     """
     Grammar (with precedence, low to high):
 
         expression := term {('plus' | 'minus') term}
-        term       := factor {('times' | 'over') factor}
+        term       := factor {('times' | 'over' | 'mod') factor}
         factor     := NUMBER | STRING | IDENT | '(' expression ')' | '-' factor | 'ask' STRING
     """
 
-    #helper functions peek and consume are used to look at the next token without consuming it, and to consume the next token and advance the position, respectively. 
     def __init__(self, tokens):
         self.tokens = tokens
         self.pos = 0
 
+    #look at the next token without eating it
     def peek(self):
         return self.tokens[self.pos] if self.pos < len(self.tokens) else None
 
+    #take the next token and move forward
     def consume(self):
         token = self.tokens[self.pos]
         self.pos += 1
         return token
 
-    #the parse function serves as our entry point for parsing an expression. It calls parse_expression to parse the entire expression and checks if there are any remaining tokens after parsing, raising a SyntaxError if there are unexpected tokens left.
+    #start parsing here, also complains if there are tokens left over
     def parse(self):
         node = self.parse_expression()
         if self.peek() is not None:
@@ -129,19 +118,19 @@ class Parser:
             node = ('binop', op, node, right)
         return node
 
-    # here are our other parser functions, which aids on parsing the terms according to the grammar rules.
+    #here are our other parser functions, which aids on parsing the terms according to the grammar rules.
     def parse_term(self):
         node = self.parse_factor()
-        while self.peek() and self.peek()[0] in ('TIMES', 'OVER'):
+        while self.peek() and self.peek()[0] in ('TIMES', 'OVER', 'MOD'):
             op = self.consume()[0].lower()
             right = self.parse_factor()
             node = ('binop', op, node, right)
         return node
 
-    # parse function does one of few things
-    # if a factor is expected and there is no factor, raises a syntax error
-    # it also looks into the next token to determine what kind of factor it is, and handles unary minus, parentheses, numbers, strings, identifiers, and the 'ask' keyword for user input.
-    # bracket matching is also enforced here giving more error handling for our PL
+    #parse function does one of few things
+    #if a factor is expected and there is no factor, raises a syntax error
+    #it also looks into the next token to determine what kind of factor it is, and handles unary minus, parentheses, numbers, strings, identifiers, and the 'ask' keyword for user input.
+    #bracket matching is also enforced here giving more error handling for our PL
     def parse_factor(self):
         token = self.peek()
         if token is None:
@@ -173,17 +162,17 @@ class Parser:
             return ('var', token[1])
 
         if token[0] == 'ASK':
-            self.consume()                                 # consume 'ask'
+            self.consume()                                 #consume 'ask'
             prompt_token = self.peek()
             if prompt_token is None or prompt_token[0] != 'STRING':
                 raise SyntaxError("Expected a string prompt after 'ask'")
-            self.consume()                                 # consume the string prompt
+            self.consume()                                 #consume the string prompt
             return ('ask', prompt_token[1])
 
         raise SyntaxError(f"Unexpected token {token[0]} in expression")
 
 
-#these are helper values to check what type of token we are dealing with
+#little helpers to check if a value is a number or a string
 def _is_number(value):
     return isinstance(value, (int, float))
 
@@ -207,6 +196,8 @@ def evaluate(node, variables):
                  anything else    -> TypeError
         over   : number / number  -> number  (division by zero -> error)
                  anything else    -> TypeError
+        mod    : number mod number -> number (remainder, mod by zero -> error)
+                 anything else    -> TypeError
         unary_minus : -number -> number
                       -string -> TypeError
     """
@@ -226,7 +217,11 @@ def evaluate(node, variables):
 
     if kind == 'ask':
         prompt = node[1]
-        user_input = input(prompt)
+        #if theres no more input to read (end of file) say it plainly
+        try:
+            user_input = input(prompt)
+        except EOFError:
+            raise EOFError("Expected input but there was none")
         #Try to convert the input to a number, fall back to string.
         try:
             if '.' in user_input:
@@ -238,10 +233,10 @@ def evaluate(node, variables):
     if kind == 'unary_minus':
         operand = evaluate(node[1], variables)
         if not _is_number(operand):
-            raise TypeError(f"Cannot negate a non-numeric value: {operand!r}")
+            raise TypeError(f"cant negate {operand!r}")
         return -operand
 
-    #for every binary operation, we evaluate the left and right operands, check their types, and perform the operation if valid; otherwise, we raise a TypeError with an error message to guide them
+    #do the math but check the types first, error out if they dont match
     if kind == 'binop':
         op = node[1]
         left = evaluate(node[2], variables)
@@ -252,36 +247,31 @@ def evaluate(node, variables):
                 return left + right
             if _is_string(left) and _is_string(right):
                 return left + right
-            raise TypeError(
-                f"Cannot add {type(left).__name__} and {type(right).__name__}. "
-                f"Use numbers with numbers or strings with strings."
-            )
+            raise TypeError(f"cant add {type(left).__name__} and {type(right).__name__}")
 
         if op == 'minus':
             if _is_number(left) and _is_number(right):
                 return left - right
-            raise TypeError(
-                f"Cannot subtract {type(right).__name__} from {type(left).__name__}. "
-                f"Subtraction only works on numbers."
-            )
+            raise TypeError("you can only subtract numbers")
 
         if op == 'times':
             if _is_number(left) and _is_number(right):
                 return left * right
-            raise TypeError(
-                f"Cannot multiply {type(left).__name__} by {type(right).__name__}. "
-                f"Multiplication only works on numbers."
-            )
+            raise TypeError("you can only multiply numbers")
+
+        if op == 'mod':
+            if _is_number(left) and _is_number(right):
+                if right == 0:
+                    raise ZeroDivisionError("Modulo by zero")
+                return left % right
+            raise TypeError("you can only do mod on numbers")
 
         if op == 'over':
             if _is_number(left) and _is_number(right):
                 if right == 0:
                     raise ZeroDivisionError("Division by zero")
                 return left / right
-            raise TypeError(
-                f"Cannot divide {type(left).__name__} by {type(right).__name__}. "
-                f"Division only works on numbers."
-            )
+            raise TypeError("you can only divide numbers")
 
     raise ValueError(f"Unknown AST node kind: {kind}")
 
@@ -300,76 +290,121 @@ def strip_inline_comment(line):
     return line
 
 
-# we use regex to check what kind of statement each line is, then call the right function for it
+#we use regex to check what kind of statement each line is, then call the right function for it
 
-# Match variable declarations: "variable [name] is [expression]"
-# Group 1 which is (\w+) = variable name, Group 2 which is (.+?) = expression after 'is'
+#Match variable declarations: "variable [name] is [expression]"
+#Group 1 which is (\w+) = variable name, Group 2 which is (.+?) = expression after 'is'
 VAR_PATTERN = re.compile(r'^\s*variable\s+(\w+)\s+is\s+(.+?)\s*$', re.IGNORECASE)
 
-# Match display statements: "display [expression]," (the trailing comma is optional)
-# Group 1 here is the expression to tokenize, parse, and print
+#Match display statements: "display [expression]," (the trailing comma is optional)
+#Group 1 here is the expression to tokenize, parse, and print
 DISP_PATTERN = re.compile(r'^\s*display\s+(.+?)\s*,?\s*$', re.IGNORECASE)
 
+#Match a variable with no value at all, like "variable counter"
+#it just starts at 0 until something is assigned to it
+VAR_EMPTY_PATTERN = re.compile(r'^\s*variable\s+(\w+)\s*$', re.IGNORECASE)
 
-# this state dispatch table is used to map regex patterns to their corresponding evaluation functions.
-# each entry has the pattern, which group holds the name (if any), which group holds the expression, and the function to call
-STATE_DISPATCH = [
-    {
-        'pattern': VAR_PATTERN,
-        'name_group': 1,       # capture group 1 = variable name
-        'expr_group': 2,       # capture group 2 = expression after 'is'
-        'evaluator': 'eval_declare_var',
-        'doc': 'Declare variable: variable NAME is EXPRESSION'
-    },
-    {
-        'pattern': DISP_PATTERN,
-        'name_group': None,    # display has no name, only an expression
-        'expr_group': 1,       # capture group 1 = expression to display
-        'evaluator': 'eval_print_statement',
-        'doc': 'Print: display EXPRESSION,'
-    },
-]
+#Match "variable x is" with nothing after the is, so we can give a proper error
+VAR_NO_EXPR_PATTERN = re.compile(r'^\s*variable\s+(\w+)\s+is\s*$', re.IGNORECASE)
+
+
+#keywords are reserved, they cant be used as variable names
+RESERVED_WORDS = ('variable', 'is', 'display', 'plus', 'minus', 'times', 'over', 'mod', 'ask')
+
+
+def check_not_reserved(name):
+    if name.lower() in RESERVED_WORDS:
+        raise SyntaxError(f"'{name}' is a reserved word, pick another name")
+
 
 def eval_declare_var(name, expr_str, variables, line_number):
     """Declare a variable from the regex-matched name and expression string.
 
    basically this function takes the variable name and expression string, tokenizes the expression, parses it into an AST, evaluates it, and stores the result in the variables dictionary under the given name.
-    Any error (bad syntax, undefined variable, type mismatch) is caught and
-    reported with the line number, so the user can fix it.
+    if something breaks we print the error with its line number so you can fix it
     """
     try:
+        check_not_reserved(name)
         tokens = tokenize_expression(expr_str)
         parser = Parser(tokens)
         ast = parser.parse()
         value = evaluate(ast, variables)
         variables[name] = value
+        return True
     except Exception as e:
         print(f"Error on line {line_number}: {e}")
+        return False
 
-# basicaly this function evaluates the display keyword which is used to print values of an expressio
+#basicaly this function evaluates the display keyword which is used to print values of an expressio
 def eval_print_statement(name, expr_str, variables, line_number):
-    """Evaluate and print an expression for the display statement.
-    """
+    """evaluates the expression then prints it"""
     try:
         tokens = tokenize_expression(expr_str)
         parser = Parser(tokens)
         ast = parser.parse()
         value = evaluate(ast, variables)
         print(value)
+        return True
     except Exception as e:
         print(f"Error on line {line_number}: {e}")
+        return False
 
-# what this does is to read the source file line by line, strip comments and whitespace, match each line against the regex patterns in STATE_DISPATCH, and call the corresponding evaluator function with the extracted variable name and expression string.
-# also if no pattern matches, it shows an error message.
+
+#for "variable counter" with no value, the variable just starts at 0
+def eval_declare_empty(name, expr_str, variables, line_number):
+    try:
+        check_not_reserved(name)
+        variables[name] = 0
+        return True
+    except Exception as e:
+        print(f"Error on line {line_number}: {e}")
+        return False
+
+
+#the line was "variable x is" and then nothing, so tell them the expression is missing
+def eval_missing_expression(name, expr_str, variables, line_number):
+    print(f"Error on line {line_number}: Expected an expression after 'is'")
+    return False
+
+#statement table: pattern, which groups hold the name and expression, then the function to call
+STATE_DISPATCH = [
+    {
+        'pattern': VAR_PATTERN,
+        'name_group': 1,       #capture group 1 = variable name
+        'expr_group': 2,       #capture group 2 = expression after 'is'
+        'evaluator': eval_declare_var
+    },
+    {
+        'pattern': VAR_EMPTY_PATTERN,
+        'name_group': 1,       #just the name, theres no expression here
+        'expr_group': None,
+        'evaluator': eval_declare_empty
+    },
+    {
+        'pattern': VAR_NO_EXPR_PATTERN,
+        'name_group': 1,
+        'expr_group': None,
+        'evaluator': eval_missing_expression
+    },
+    {
+        'pattern': DISP_PATTERN,
+        'name_group': None,    #display has no name, only an expression
+        'expr_group': 1,       #capture group 1 = expression to display
+        'evaluator': eval_print_statement
+    },
+]
+
+#what this does is to read the source file line by line, strip comments and whitespace, match each line against the regex patterns in STATE_DISPATCH, and call the corresponding evaluator function with the extracted variable name and expression string.
+#also if no pattern matches, it shows an error message.
 def run_plfp_file(filename):
     """Read a PLFP source file and execute its statements.
        Further documentation of how PLFP works is in the README.md file, 
        which is included with the source code.
     """
     variables = {}
+    had_error = False
 
-    # read the whole source file up. if it is missing or unreadable we
-    # report it and exit, because there is nothing else we can do
+    #open the file, if it wont open just stop
     try:
         with open(filename, 'r', encoding='utf-8') as file:
             lines = file.readlines()
@@ -387,31 +422,34 @@ def run_plfp_file(filename):
         if not line or line.startswith('#'):
             continue
 
-        # Iterate through STATE_DISPATCH to look for matching patterns.
-        # We pull the variable name (if any) and the expression out of the match
-        # groups, then hand them to the entry's evaluator function. If nothing
-        # matches at all, the line is not valid PLFP and we say so.
+        #try each pattern, the first one that matches runs its function,
+        #if nothing matches the line is not valid PLFP
         matched = False
         for entry in STATE_DISPATCH:
             pat = entry['pattern']
             m = pat.match(line)
             if m:
                 name = m.group(entry['name_group']) if entry['name_group'] else None
-                expr_str = m.group(entry['expr_group'])
-                ev = globals()[entry['evaluator']]
+                expr_str = m.group(entry['expr_group']) if entry['expr_group'] else None
+                ev = entry['evaluator']
                 try:
-                    ev(name, expr_str, variables, line_number)
-                    matched = True
-                    break
+                    ok = ev(name, expr_str, variables, line_number)
                 except Exception as e:
                     print(f"Error on line {line_number}: {e}")
-                    matched = True
-                    break
+                    ok = False
+                matched = True
+                if not ok:
+                    had_error = True
+                break
 
         if not matched:
-            print(f"Error on line {line_number}: Unrecognized statement: {raw_line.rstrip()}")
+            print(f"Error on line {line_number}: Unrecognized statement: {line}")
+            had_error = True
 
-# start of the interpreter script, 
+    #main uses this to exit with code 1 if anything failed along the way
+    return had_error
+
+#start of the interpreter script, 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         #shows how to use the interpreter if no source file is provided as a command-line argument
@@ -420,9 +458,12 @@ if __name__ == '__main__':
 
     source_file = sys.argv[1]
 
-    # only .plfp files are PLFP source code, anything else is probably a mistake
+    #only .plfp files are PLFP source code, others are not read by the interpreter
     if not source_file.lower().endswith('.plfp'):
         print(f"Error: '{source_file}' is not a .plfp file")
         sys.exit(1)
 
-    run_plfp_file(source_file)
+    had_error = run_plfp_file(source_file)
+    if had_error:
+        sys.exit(1)
+    sys.exit(0)

@@ -1,0 +1,5 @@
+variable ask is 6
+display ask
+variable number is ask "enter a number: "
+
+display ask
