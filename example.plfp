@@ -4,7 +4,7 @@
 # Simple assignments
 variable age is 25
 variable pi is 3.14159
-variable name is "PLFP"
+variable name is "Arom ALCAUSIn"
 
 # Arithmetic with operator precedence (times/over before plus/minus)
 variable score is 10 plus 5 times 2        # 10 + (5 * 2) = 20
@@ -21,7 +21,7 @@ variable y is (6 plus 7) over 8            # (6 + 7) / 8 = 1.625
 # String concatenation
 variable greeting is "Hello" plus " " plus name
 
-# User input (the interpreter will pause and wait for your typing)
+# user input is embedded to assignment
 variable user_age is ask "Enter your age: "
 
 # Printing variables and strings
@@ -37,14 +37,13 @@ display y,
 display greeting,
 display user_age,
 
-# Displaying expressions (arithmetic on the fly)
+# Displaying expressions directly on display
 display age plus 7 over 3,
 display (age plus 7) over 3,
 display "Hello" plus " " plus name,
 
-display "Hello from PLFP!"
 
-# Input
+# Input and addition from input
 variable input is ask "enter number 1: "
 variable input2 is ask "enter number 2: "
 display input plus input2

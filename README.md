@@ -1,10 +1,10 @@
-# PLFP — Simple Programming Language
+# PLFP
 
-PLFP is a tiny programming language interpreted by Python. It uses regular expressions  
-and a small recursive-descent parser to read source files. It currently supports:  
+PLFP is our Programming Languages FInal Project or PLFP for short hence the extension
+it currently supports:
 - Variable declaration with arithmetic  
 - User input (`ask`)  
-- Printing (`display`)
+- Printing (`display`)  
 
 ## Files
 
@@ -22,35 +22,33 @@ and a small recursive-descent parser to read source files. It currently supports
 variable [name] is [expression]
 ```
 
-- `[name]` — a valid identifier (letters, digits, underscore; must start with a letter or underscore)
-- `[expression]` — can be:
+- `[name]` is  a valid identifier (letters, digits, underscore; must start with a letter or underscore) followinf naming conventions in PL
+- `[expression]` is a term that can be any of the folowing:
   - A number: `6`, `3.14`, `-5`
   - A string: `"hello"`
   - A variable name: `age`
-  - An arithmetic expression using `plus`, `minus`, `times`, `over`
+  - An arithmetic expression using `plus`, `minus`, `times`, `over` representing the traditional +,-,x and /
   - Parenthesised sub-expressions: `(6 plus 7) over 8`
   - Unary negation: `-5` or `- age`
-  - User input: `ask "prompt text"`
+  - User input: `ask "prompt text"`, this is a variable listed from above(number or string) already embedded on assignment
 
 Operator precedence follows standard arithmetic rules:
-
-1. `times` and `over` (multiplication/division) bind tighter than
-2. `plus` and `minus` (addition/subtraction)
-
-Parentheses override precedence.
+1. `parenthesized equations` following same precendence rules below.
+2. `times` and `over` (multiplication/division)
+3. `plus` and `minus` (addition/subtraction)
 
 Examples:
 
 ```
 variable age is 25
 variable pi is 3.14159
-variable name is "PLFP"
+variable name is "LIN PINEDA"
 
 variable score is 10 plus 5 times 2        # 20
 variable half is (10 plus 5) over 3        # 5
 variable double_age is age times 2         # 50
 variable y is (6 plus 7) over 8            # 1.625
-variable greeting is "Hello" plus " " plus name   # "Hello PLFP"
+variable greeting is "Hello" plus " " plus name   # "Hello LIN PINEDA"
 variable user_age is ask "Enter your age: "       # prompts user for input
 ```
 
@@ -86,7 +84,7 @@ Print the result of any expression:
 ```
 display [expression],
 ```
-
+expressions similarly are any expression listed above.
 Examples:
 
 ```
@@ -107,9 +105,9 @@ Inline comments after code are also supported.
 
 ## How to run
 
-1. Make sure you have Python installed (3.6+ recommended).
-2. Open a terminal / PowerShell in this folder (`c:\PLFP`).
-3. Run the interpreter with a PLFP source file:
+2. Open a terminal in the folder interpreter.py is placed on
+2. Create a PLFP file in the folder and write your code.
+3. Run the interpreter with the source file like below
 
 ```
 python interpreter.py example.plfp
@@ -122,52 +120,23 @@ If the program uses `ask`, the interpreter will pause and wait for you to type a
 ```
 Enter your age: 25
 3.14159
-PLFP
+Arom ALCAUSIn
 20
 5.0
 60
 50
 30.0
 1.625
-Hello PLFP
-30
-Hello from PLFP!
+Hello Arom ALCAUSIn
+Hello from Arom ALCAUSIn!
 ```
 
 ## Error handling
 
 All errors are reported with the line number where they occurred:
 
-- **Undefined variable:** `Error on line 3: Variable 'foo' is not defined`
+- **Undefined variable:** `Error on line 3: Variable '[varname]' is not defined`
 - **Type mismatch:** `Error on line 1: Cannot add str and int. Use numbers with numbers or strings with strings.`
 - **Division by zero:** `Error on line 1: Division by zero`
 - **Syntax error:** `Error on line 1: Unexpected character '@' in expression`
 - **Missing prompt:** `Error on line 1: Expected a string prompt after 'ask'`
-
-## Extending the language
-
-The interpreter is intentionally small and regex/parser-based. To add new features:
-
-1. Add a new token type in `tokenize_expression()`.
-2. Add a grammar rule in the `Parser` class.
-3. Add an evaluation case in `evaluate()`.
-4. Update this README with the new syntax.
-
-## Example session
-
-```
-C:\PLFP> python interpreter.py example.plfp
-Enter your age: 30
-25
-3.14159
-PLFP
-20
-5.0
-60
-50
-30.0
-1.625
-Hello PLFP
-30
-Hello from PLFP!
-```
